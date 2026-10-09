@@ -1,0 +1,6 @@
+{
+  "name": "PR governance note",
+  "description": "Placeholder pointing maintainers to copy semantic-pr, labeler, and auto-assign workflows.",
+  "iconName": "octicon gear",
+  "categories": ["Automation", "Code quality"]
+}

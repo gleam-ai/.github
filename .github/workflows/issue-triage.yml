@@ -1,0 +1,41 @@
+name: Issue triage
+
+on:
+  issues:
+    types: [opened, transferred]
+
+permissions:
+  issues: write
+
+jobs:
+  triage:
+    name: Label & assign
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add needs-triage and assign maintainers
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = (issue.labels || []).map(l => l.name);
+            if (!labels.includes('needs-triage')) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['needs-triage'],
+              });
+              core.info('Added needs-triage');
+            }
+            try {
+              // Assign org maintainers team is not supported via assignees API for teams;
+              // assign a known maintainer as fallback.
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: ['vyrnsynx'],
+              });
+            } catch (err) {
+              core.warning(`Could not assign: ${err.message}`);
+            }

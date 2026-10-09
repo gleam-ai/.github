@@ -1,0 +1,71 @@
+name: CI (Go)
+
+# Template for Go product repos. Copy to .github/workflows/ci.yml and adjust.
+# Gleam reference: windows-latest for tests (path semantics), ubuntu for format/build.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format-vet-build:
+    name: Format / vet / build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          out=$(gofmt -l ./internal ./pkg ./cmd 2>/dev/null || gofmt -l .)
+          if [ -n "$out" ]; then echo "$out"; exit 1; fi
+      - name: go vet
+        run: go vet ./...
+      - name: go build
+        run: go build ./...
+
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: go test
+        run: go test ./... -count=1 -timeout 300s
+
+  ci-success:
+    name: CI Success
+    if: ${{ always() }}
+    needs: [format-vet-build, test]
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash
+        run: |
+          set -euo pipefail
+          for r in "${{ needs.format-vet-build.result }}" "${{ needs.test.result }}"; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then exit 1; fi
+          done

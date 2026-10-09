@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-workflows:
+    name: Lint workflows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: actionlint
+        uses: raven-actions/actionlint@v2
+
+      - name: YAML sanity (hub configs)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, sys
+          try:
+              import yaml
+          except ImportError:
+              import subprocess
+              subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "pyyaml"])
+              import yaml
+          roots = [
+              pathlib.Path(".github/workflows"),
+              pathlib.Path(".github/workflow-templates"),
+              pathlib.Path(".github/ISSUE_TEMPLATE"),
+          ]
+          files = []
+          for r in roots:
+              if r.exists():
+                  files.extend(sorted(r.rglob("*.yml")))
+                  files.extend(sorted(r.rglob("*.yaml")))
+          for extra in [".github/dependabot.yml", ".github/labeler.yml", ".github/release-drafter.yml"]:
+              p = pathlib.Path(extra)
+              if p.exists():
+                  files.append(p)
+          for f in files:
+              yaml.safe_load(f.read_text(encoding="utf-8"))
+              print(f"ok {f}")
+          print(f"parsed {len(files)} YAML files")
+          PY
+
+  markdown-links:
+    name: Profile & docs present
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Required files
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            profile/README.md \
+            README.md \
+            CONTRIBUTING.md \
+            CODE_OF_CONDUCT.md \
+            SECURITY.md \
+            SUPPORT.md \
+            GOVERNANCE.md \
+            CODEOWNERS \
+            .github/PULL_REQUEST_TEMPLATE.md \
+            .github/ISSUE_TEMPLATE/config.yml
+          do
+            test -f "$f" || { echo "missing $f"; exit 1; }
+            echo "ok $f"
+          done
+
+  ci-success:
+    name: CI Success
+    if: ${{ always() }}
+    needs: [lint-workflows, markdown-links]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        shell: bash
+        run: |
+          set -euo pipefail
+          for r in "${{ needs.lint-workflows.result }}" "${{ needs.markdown-links.result }}"; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+              echo "Required job failed or was cancelled: $r"
+              exit 1
+            fi
+          done
+          echo "CI gate passed."

@@ -1,0 +1,31 @@
+area/docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+          - "profile/**"
+
+area/ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/workflow-templates/**"
+          - ".github/dependabot.yml"
+          - ".github/labeler.yml"
+
+type/deps:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/package-lock.json"
+          - "**/pnpm-lock.yaml"
+          - "**/yarn.lock"
+          - "**/go.sum"
+          - "**/requirements*.txt"
+          - "**/pyproject.toml"
+
+area/security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/SECURITY.md"
+          - ".github/workflows/*codeql*"
+          - ".github/workflows/*dependency-review*"

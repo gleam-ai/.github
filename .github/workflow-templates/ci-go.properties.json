@@ -1,0 +1,6 @@
+{
+  "name": "Go CI",
+  "description": "gofmt + vet + build on Ubuntu; unit tests on Windows (desktop Go apps).",
+  "iconName": "go",
+  "categories": ["Go", "Continuous integration"]
+}

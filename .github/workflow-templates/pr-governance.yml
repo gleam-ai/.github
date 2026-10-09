@@ -1,0 +1,13 @@
+name: PR governance
+
+# Combines semantic title check guidance — prefer separate workflows in product repos
+# (semantic-pr.yml, labeler.yml, pr-auto-assign.yml) copied from gleam-ai/.github.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Copy individual workflows from gleam-ai/.github/.github/workflows/"
